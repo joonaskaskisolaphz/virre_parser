@@ -138,7 +138,7 @@ class virreParser
 
 		if ( ! preg_match('/^[0-9]{7}[-][0-9]{1}$/', $businessId)) // check if the given businessId is in the right format
 		{
-			throw new Exception("Invalid vatcode!");
+			throw new Exception("Invalid businessid!");
 		}
 		else
 		{
