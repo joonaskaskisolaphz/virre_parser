@@ -15,5 +15,5 @@ if ( ! empty($given_arguments)) {
 }
 else
 {
-	die('Usage: php '.$argv[0].' 1234567-8'.PHP_EOL);
+	die('Usage: php '.$argv[0].' 1234567-8 2345678-9 3456789-1'.PHP_EOL);
 }
