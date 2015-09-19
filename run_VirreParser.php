@@ -1,16 +1,16 @@
 <?php
 
-require 'virreParser.php';
+require 'VirreParser.php';
 require 'class.phpmailer.php';
 
-$virre = new virreParser();
+$virre = new VirreParser();
 
 $given_arguments = $argv;
 array_shift($given_arguments);
 
 if ( ! empty($given_arguments)) {
 	foreach ($given_arguments as $given_argument) {
-		$virre->getCompanysData($given_argument);
+		$virre->get_companys_data($given_argument);
 	}
 }
 else

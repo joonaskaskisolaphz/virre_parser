@@ -4,7 +4,7 @@
  * Retrieves companys data from virre.prh.fi
  */
 
-class virreParser
+class VirreParser
 {
 
 	/*
@@ -133,7 +133,7 @@ class virreParser
 	 * @access public
  	 */
 
-	public function getCompanysData($businessId = '')
+	public function get_companys_data($businessId = '')
 	{
 
 		if ( ! preg_match('/^[0-9]{7}[-][0-9]{1}$/', $businessId)) // check if the given businessId is in the right format
