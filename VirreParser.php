@@ -17,7 +17,7 @@ class VirreParser
 			'joonas.kaskisola@phz.fi',
 		);
 
-		$this->json_data = 'data.json';
+		$this->json_data_file = 'data.json';
 		$this->company_info_array = array();
 		$this->user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/44.0.2403.89 Chrome/44.0.2403.89 Safari/537.36';
 		$this->column_names = array(
@@ -196,7 +196,7 @@ class VirreParser
 	 * @access private
 	 */
 
-	private function get_execution_id ($url)
+	private function get_execution_id($url)
 	{
 		preg_match('/execution[=]([a-z0-9]+)/', $url, $res);
 
@@ -210,20 +210,16 @@ class VirreParser
 	}
 
 	/*
-	 * Removes the tmp cookiefile and updates the json file
+	 * Saves new data to $this->json_data_file and send email if necessary
 	 * @access public
 	 */
 
-	public function __destruct()
+	public function save_data_and_send_mail()
 	{
-		if (file_exists($this->cookie_jar)) {
-			unset($this->cookie_jar);
-		}
-
 		$mail_contents = '';
 
-		if (file_exists($this->json_data) || ( ! file_exists($this->json_data) && touch($this->json_data))) {
-			$existing_data = file_get_contents($this->json_data);
+		if (file_exists($this->json_data_file) || ( ! file_exists($this->json_data_file) && touch($this->json_data_file))) {
+			$existing_data = file_get_contents($this->json_data_file);
 
 			try {
 				$existing_data_array = json_decode($existing_data, TRUE);
@@ -247,7 +243,7 @@ class VirreParser
 				}
 			}
 
-			file_put_contents($this->json_data, json_encode($existing_data_array));
+			file_put_contents($this->json_data_file, json_encode($existing_data_array));
 
 			if ( ! empty($mail_contents) && ! empty($this->send_mail_to)) {
 				$mail = new PHPMailer;
@@ -266,6 +262,18 @@ class VirreParser
 					// echo "Message sent!".PHP_EOL;
 				}
 			}
+		}
+	}
+
+	/*
+	 * Deletes the cookie file we created earlier
+	 * @access public
+	 */
+
+	public function __destruct()
+	{
+		if (file_exists($this->cookie_jar)) {
+			unset($this->cookie_jar);
 		}
 	}
 }

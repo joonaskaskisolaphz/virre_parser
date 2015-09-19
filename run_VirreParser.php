@@ -12,6 +12,8 @@ if ( ! empty($given_arguments)) {
 	foreach ($given_arguments as $given_argument) {
 		$virre->get_companys_data($given_argument);
 	}
+
+	$virre->save_data_and_send_mail();
 }
 else
 {
