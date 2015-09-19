@@ -1,15 +1,15 @@
 <?php
 
-/*
+/**
  * Retrieves companys data from virre.prh.fi
  */
 
 class VirreParser
 {
 
-	/*
-	* Constructor
-	*/
+	/**
+	 * Constructor
+	 */
 
 	public function __construct()
 	{
@@ -37,7 +37,7 @@ class VirreParser
 		$this->curl_request($this->base_url);
 	}
 
-	/*
+	/**
 	 * Retrieves contents of a webpage
 	 * @param string $url URL
 	 * @param array $post_data POST request data ( array('a' => 1, 'b' => 2, ..) )
@@ -126,7 +126,7 @@ class VirreParser
 		return array('curl_info' => $curl_info, 'contents' => $retrieved_page);
 	}
 
-	/*
+	/**
 	 * Retrieves chosen companys data from virre.prh.fi and creates an array of it
 	 * @param string $businessId Companys businessid (1234567-8)
 	 * @return array
@@ -189,7 +189,7 @@ class VirreParser
 		}
 	}
 
-	/*
+	/**
 	 * Extracts 'execution' id from url for next request
 	 * @param string $url Current URL
 	 * @return string Returns the execution id
@@ -209,7 +209,7 @@ class VirreParser
 		}
 	}
 
-	/*
+	/**
 	 * Saves new data to $this->json_data_file and send email if necessary
 	 * @access public
 	 */
@@ -265,7 +265,7 @@ class VirreParser
 		}
 	}
 
-	/*
+	/**
 	 * Deletes the cookie file we created earlier
 	 * @access public
 	 */
