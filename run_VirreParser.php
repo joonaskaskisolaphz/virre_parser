@@ -21,5 +21,3 @@ if ( ! empty( $given_arguments ))
 }
 
 $virre->save_data_and_send_mail();
-
-echo "moi".PHP_EOL;
