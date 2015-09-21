@@ -14,7 +14,7 @@ $virre->search_active_companys_data();
 
 if ( ! empty( $given_arguments ))
 {
-    foreach ( $given_arguments as $given_argument)
+    foreach ( $given_arguments as $given_argument )
     {
         $virre->get_companys_data( $given_argument );
     }
