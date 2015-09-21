@@ -259,6 +259,27 @@ class VirreParser
     }
 
     /**
+     * Adds companies names to $this->yaml_file for easier editing
+     * @access private
+     */
+
+    private function add_companies_names_to_yaml_file()
+    {
+        $yaml_data = file_get_contents( $this->yaml_file );
+
+        foreach ( $this->company_info_array as $businessId => $businessData)
+        {
+            $last_businessData = end($businessData);
+
+            $companys_name = $last_businessData['yrityksen_nimi'];
+
+            $yaml_data = preg_replace( '/'.$businessId.'/', $businessId.' # '.$companys_name, $yaml_data );
+        }
+
+        file_put_contents( $this->yaml_file, $yaml_data );
+    }
+
+    /**
      * Saves new data to $this->json_data_file and send email if necessary
      * @access public
      */
@@ -297,6 +318,9 @@ class VirreParser
                     }
                 }
             }
+
+            $this->add_companies_names_to_yaml_file();
+            die;
 
             file_put_contents( $this->json_data_file, json_encode( $existing_data_array ) );
 
