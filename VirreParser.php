@@ -21,7 +21,6 @@ class VirreParser
         }
 
         $this->settings = yaml_parse_file( $this->yaml_file, 0 );
-        var_dump($this->settings);
 
         $this->json_data_file = 'data.json';
         $this->company_info_array = array();
@@ -253,7 +252,7 @@ class VirreParser
 
     private function save_settings()
     {
-        yaml_emit_file( $this->yaml_file, $this->settings, YAML_UTF8_ENCODING );
+        yaml_emit_file( $this->yaml_file, $this->settings, YAML_ANY_ENCODING );
     }
 
     /**
