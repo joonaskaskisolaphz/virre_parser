@@ -320,7 +320,6 @@ class VirreParser
             }
 
             $this->add_companies_names_to_yaml_file();
-            die;
 
             file_put_contents( $this->json_data_file, json_encode( $existing_data_array ) );
 
