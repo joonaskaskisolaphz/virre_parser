@@ -252,7 +252,7 @@ class VirreParser
 
     private function save_settings()
     {
-        yaml_emit_file( $this->yaml_file, $this->settings, YAML_ANY_ENCODING );
+        yaml_emit_file( $this->yaml_file, $this->settings );
     }
 
     /**
