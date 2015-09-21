@@ -278,11 +278,6 @@ class VirreParser
                 $existing_data_array = array();
             }
 
-            echo "arr".PHP_EOL;
-            var_dump($existing_data_array);
-            echo "string".PHP_EOL;
-            var_dump($existing_data);
-
             foreach ( $this->company_info_array as $businessId => $businessData )
             {
                 if ( ! array_key_exists( $businessId, $existing_data_array ) )
