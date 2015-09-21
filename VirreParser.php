@@ -191,7 +191,10 @@ class VirreParser
                 $i = 0;
                 $ii = 0;
 
-                $this->company_info_array[$businessId] = array();
+                if ( 0 != $results['length'] )
+                {
+                    $this->company_info_array[$businessId] = array();
+                }
 
                 foreach ( $results as $node )
                 {
