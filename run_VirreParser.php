@@ -6,16 +6,20 @@ require 'class.phpmailer.php';
 $virre = new VirreParser();
 
 $given_arguments = $argv;
-array_shift($given_arguments);
+array_shift( $given_arguments );
 
-if ( ! empty($given_arguments)) {
-	foreach ($given_arguments as $given_argument) {
-		$virre->get_companys_data($given_argument);
-	}
+// Käydään ensin läpi vanhat, sitten uudet
 
-	$virre->save_data_and_send_mail();
-}
-else
+$virre->search_active_companys_data();
+
+if ( ! empty( $given_arguments ))
 {
-	die('Usage: php '.$argv[0].' 1234567-8 2345678-9 3456789-1'.PHP_EOL);
+    foreach ( $given_arguments as $given_argument)
+    {
+        $virre->get_companys_data( $given_argument );
+    }
 }
+
+$virre->save_data_and_send_mail();
+
+echo "moi".PHP_EOL;
