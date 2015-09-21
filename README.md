@@ -1,1 +1,3 @@
-See run_VirreParser.php
+1. Configure settings.yaml
+2. Run run_VirreParser.php
+
