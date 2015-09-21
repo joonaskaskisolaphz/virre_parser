@@ -234,8 +234,7 @@ class VirreParser
     }
 
     /**
-     * todo
-     *
+     * Goes through active businessids
      * @access public
      */
 
@@ -244,13 +243,12 @@ class VirreParser
         foreach ( $this->settings['business_ids']['active'] as $businessId)
         {
             $this->get_companys_data( $businessId );
-            echo $businessId.PHP_EOL;
         }
     }
 
     /**
      * Saves $this->settings to $this->yaml_file
-     *
+     * @access public
      */
 
     private function save_settings()
@@ -265,6 +263,7 @@ class VirreParser
 
     public function save_data_and_send_mail()
     {
+        $this->save_settings();
 
         $mail_contents = '';
 
