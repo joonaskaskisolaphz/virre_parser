@@ -17,7 +17,7 @@ class VirreParser
 
         if ( ! file_exists( $this->yaml_file ) )
         {
-            throw new Exception($this->yaml_file.' is missing');
+            throw new Exception( $this->yaml_file.' is missing' );
         }
 
         $this->settings = yaml_parse_file( $this->yaml_file, 0 );
@@ -69,15 +69,15 @@ class VirreParser
         }
 
         $http_header = array(
-            "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/"."*;q=0.8",
-            "Accept-Encoding: gzip, deflate",
-            "Accept-Language: en-US,en;q=0.8",
-            "Connection: keep-alive",
-            "Cache-Control: max-age=0",
-            "Host: virre.prh.fi",
-            "HTTPS: 1",
-            "Cache-Control: no-cache, no-store",
-            "Pragma: no-cache",
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/'.'*;q=0.8',
+            'Accept-Encoding: gzip, deflate',
+            'Accept-Language: en-US,en;q=0.8',
+            'Connection: keep-alive',
+            'Cache-Control: max-age=0',
+            'Host: virre.prh.fi',
+            'HTTPS: 1',
+            'Cache-Control: no-cache, no-store',
+            'Pragma: no-cache',
         );
 
         if ( 0 != count( $post_data ) )
@@ -86,18 +86,18 @@ class VirreParser
             $post_fields = '';
             foreach ( $post_data as $key => $value )
             {
-                $post_fields .= $key . "=" . urlencode( $value ) . "&";
+                $post_fields .= $key . '=' . urlencode( $value ) . '&';
             }
 
 
-            $http_header[] = "Content-Type: application/x-www-form-urlencoded";
+            $http_header[] = 'Content-Type: application/x-www-form-urlencoded';
 
             curl_setopt( $ch, CURLOPT_POST, 1 ); // Switch from GET to POST
             curl_setopt( $ch, CURLOPT_POSTFIELDS, $post_fields );
         }
         else
         {
-            $http_header[1] .= ", sdch"; // Accept-Encoding:
+            $http_header[1] .= ', sdch'; // Accept-Encoding:
         }
 
         curl_setopt( $ch, CURLOPT_HTTPHEADER, $http_header );
@@ -117,12 +117,12 @@ class VirreParser
                 $res[2][1] => $res[1][1], // j_password
             );
 
-            $this->curl_request( $this->jssu, $login_cred_array, "https://virre.prh.fi/novus/home" );
+            $this->curl_request( $this->jssu, $login_cred_array, 'https://virre.prh.fi/novus/home' );
 
         }
         else if ( preg_match( '/WebServer - Error report/', $retrieved_page ) )
         {
-            throw new Exception( "WebServer Error" );
+            throw new Exception( 'WebServer Error' );
         }
 
         return array(
@@ -141,9 +141,9 @@ class VirreParser
     public function get_companys_data($businessId = '')
     {
 
-        if ( ! preg_match( '/^[0-9]{7}[-][0-9]{1}$/', $businessId ) ) // check if the given businessId is in the right format
+        if ( ! preg_match( '/^[0-9]{7}[-][0-9]{1}$/', $businessId ) ) // Check if the given businessId is in the right format
         {
-            throw new Exception( "Invalid businessid!" );
+            throw new Exception( 'Invalid businessid!' );
         }
         else
         {
@@ -152,7 +152,7 @@ class VirreParser
             {
                 if ( ($businessId_key = array_search( $businessId, $this->settings['business_ids']['inactive'] )) !== false )
                 {
-                    // Löytyi 'inactive' listasta, siirretään aktiivisiin
+                    // Business id found from the 'inactive' list, moving to 'active' list
                     unset( $this->settings['business_ids']['inactive'][$businessId_key] );
                 }
 
@@ -167,23 +167,25 @@ class VirreParser
             {
 
                 $search_fields = array(
-                    "businessId" => $businessId,
-                    "startDate" => "",
-                    "endDate" => "",
-                    "registrationTypeCode" => "",
-                    "_todayRegistered" => "on",
-                    "_domicileCode" => "1",
-                    "_eventId_search" => "Hae",
-                    "execution" => $executionId,
-                    "_defaultEventId" => "",
+                    'businessId' => $businessId,
+                    'startDate' => '',
+                    'endDate' => '',
+                    'registrationTypeCode' => '',
+                    '_todayRegistered' => 'on',
+                    '_domicileCode' => '1',
+                    '_eventId_search' => 'Hae',
+                    'execution' => $executionId,
+                    '_defaultEventId' => '',
                 );
 
                 $data = $this->curl_request( $base_url, $search_fields, $base_url );
 
                 $DOM = new DOMDocument;
 
-                $fixed_html = str_replace( '&', '&amp;', $data['contents'] );
-                $DOM->loadHTML( $fixed_html );
+                // Fixes & characters that dont have ; with them
+                $amp_fix = preg_replace( '/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $data['contents'] );
+
+                $DOM->loadHTML( $amp_fix );
 
                 $selector = new DOMXPath( $DOM );
                 $results = $selector->query( './/table/tbody/tr/td' );
@@ -269,7 +271,7 @@ class VirreParser
 
         foreach ( $this->company_info_array as $businessId => $businessData)
         {
-            $last_businessData = end($businessData);
+            $last_businessData = end( $businessData );
 
             $companys_name = $last_businessData['yrityksen_nimi'];
 
@@ -338,11 +340,11 @@ class VirreParser
 
                 if ( ! $mail->send() )
                 {
-                    echo "Mailer Error: " . $mail->ErrorInfo;
+                    echo 'Mailer Error: ' . $mail->ErrorInfo;
                 }
                 else
                 {
-                    echo "Message sent!";
+                    echo 'Message sent!';
                 }
             }
         }
