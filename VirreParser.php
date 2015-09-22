@@ -35,7 +35,7 @@ class VirreParser
         );
         $this->cookie_jar = tempnam( sys_get_temp_dir(), 'virre' );
         $this->base_url = 'https://virre.prh.fi/novus/publishedEntriesSearch';
-        $this->jssu = 'https://virre.prh.fi/novus/j_security_check'; // j_security_check url
+        $this->j_security_check = 'https://virre.prh.fi/novus/j_security_check'; /* j_security_check url */
 
         $this->curl_request( $this->base_url );
     }
@@ -91,12 +91,12 @@ class VirreParser
 
             $http_header[] = 'Content-Type: application/x-www-form-urlencoded';
 
-            curl_setopt( $ch, CURLOPT_POST, 1 ); // Switch from GET to POST
+            curl_setopt( $ch, CURLOPT_POST, 1 ); /* Switch from GET to POST */
             curl_setopt( $ch, CURLOPT_POSTFIELDS, $post_fields );
         }
         else
         {
-            $http_header[1] .= ', sdch'; // Accept-Encoding:
+            $http_header[1] .= ', sdch'; /* Accept-Encoding: */
         }
 
         curl_setopt( $ch, CURLOPT_HTTPHEADER, $http_header );
@@ -112,11 +112,11 @@ class VirreParser
             preg_match_all( '/<input type="hidden" value="(.*)" name="(.*)"\/>/', $retrieved_page, $res );
 
             $login_cred_array = array(
-                $res[2][0] => $res[1][0], // j_username
-                $res[2][1] => $res[1][1], // j_password
+                $res[2][0] => $res[1][0], /* j_username */
+                $res[2][1] => $res[1][1], /* j_password */
             );
 
-            $this->curl_request( $this->jssu, $login_cred_array, 'https://virre.prh.fi/novus/home' );
+            $this->curl_request( $this->j_security_check, $login_cred_array, 'https://virre.prh.fi/novus/home' );
 
         }
         else if ( preg_match( '/WebServer - Error report/', $retrieved_page ) )
@@ -132,30 +132,30 @@ class VirreParser
 
     /**
      * Retrieves chosen companys data from virre.prh.fi and creates an array of it
-     * @param string $businessId Companys businessid (1234567-8)
+     * @param string $business_id Companys businessid (1234567-8)
      * @return array
      * @access public
       */
 
-    public function get_companys_data($businessId = '')
+    public function get_companys_data($business_id = '')
     {
 
-        if ( ! preg_match( '/^[0-9]{7}[-][0-9]{1}$/', $businessId ) ) // Check if the given businessId is in the right format
+        if ( ! preg_match( '/^[0-9]{7}[-][0-9]{1}$/', $business_id ) ) /* Check if the given businessId is in the right format */
         {
             throw new Exception( 'Invalid businessid!' );
         }
         else
         {
 
-            if ( ! in_array( $businessId, $this->settings['business_ids']['active'] ) )
+            if ( ! in_array( $business_id, $this->settings['business_ids']['active'] ) )
             {
-                if ( ($businessId_key = array_search( $businessId, $this->settings['business_ids']['inactive'] )) !== false )
+                if ( ($business_id_key = array_search( $business_id, $this->settings['business_ids']['inactive'] )) !== false )
                 {
-                    // Business id is found in the 'inactive' list, moving to 'active' list
-                    unset( $this->settings['business_ids']['inactive'][$businessId_key] );
+                    /* Business id is found in the 'inactive' list, moving to 'active' list */
+                    unset( $this->settings['business_ids']['inactive'][$business_id_key] );
                 }
 
-                $this->settings['business_ids']['active'][] = $businessId;
+                $this->settings['business_ids']['active'][] = $business_id;
             }
 
             $base_url = 'https://virre.prh.fi/novus/publishedEntriesSearch';
@@ -166,7 +166,7 @@ class VirreParser
             {
 
                 $search_fields = array(
-                    'businessId' => $businessId,
+                    'businessId' => $business_id,
                     'startDate' => '',
                     'endDate' => '',
                     'registrationTypeCode' => '',
@@ -181,7 +181,7 @@ class VirreParser
 
                 $DOM = new DOMDocument;
 
-                // Fixes & characters that dont have ; with them
+                /* Fixes & characters that dont have ; with them */
                 $amp_fix = preg_replace( '/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $data['contents'] );
 
                 $DOM->loadHTML( $amp_fix );
@@ -194,7 +194,7 @@ class VirreParser
 
                 if ( 0 != $results->length )
                 {
-                    $this->company_info_array[$businessId] = array();
+                    $this->company_info_array[$business_id] = array();
 
                     foreach ( $results as $node )
                     {
@@ -206,7 +206,7 @@ class VirreParser
                         }
 
                         $column_name = $this->column_names[$i];
-                        $this->company_info_array[$businessId][$ii][$column_name] = trim( $node->nodeValue );
+                        $this->company_info_array[$business_id][$ii][$column_name] = trim( $node->nodeValue );
 
                         $i++;
                     }
@@ -243,9 +243,9 @@ class VirreParser
 
     public function search_active_companys_data()
     {
-        foreach ( $this->settings['business_ids']['active'] as $businessId)
+        foreach ( $this->settings['business_ids']['active'] as $business_id )
         {
-            $this->get_companys_data( $businessId );
+            $this->get_companys_data( $business_id );
         }
     }
 
@@ -268,13 +268,13 @@ class VirreParser
     {
         $yaml_data = file_get_contents( $this->yaml_file );
 
-        foreach ( $this->company_info_array as $businessId => $businessData)
+        foreach ( $this->company_info_array as $business_id => $business_data )
         {
-            $last_businessData = end( $businessData );
+            $last_business_data = end( $business_data );
 
-            $companys_name = $last_businessData['yrityksen_nimi'];
+            $companys_name = $last_business_data['yrityksen_nimi'];
 
-            $yaml_data = preg_replace( '/'.$businessId.'/', $businessId.' # '.$companys_name, $yaml_data );
+            $yaml_data = preg_replace( '/'.$business_id.'/', $business_id.' # '.$companys_name, $yaml_data );
         }
 
         file_put_contents( $this->yaml_file, $yaml_data );
@@ -301,21 +301,21 @@ class VirreParser
                 $existing_data_array = array();
             }
 
-            foreach ( $this->company_info_array as $businessId => $businessData )
+            foreach ( $this->company_info_array as $business_id => $business_data )
             {
-                if ( ! array_key_exists( $businessId, $existing_data_array ) )
+                if ( ! array_key_exists( $business_id, $existing_data_array ) )
                 {
-                    $existing_data_array[$businessId] = md5( json_encode( end( $businessData ) ) );
+                    $existing_data_array[$business_id] = md5( json_encode( end( $business_data ) ) );
                 }
                 else
                 {
-                    if ( md5( json_encode( end( $businessData ) ) ) != $existing_data_array[$businessId] )
+                    if ( md5( json_encode( end( $business_data ) ) ) != $existing_data_array[$business_id] )
                     {
-                        $bd_end = end( $businessData );
+                        $bd_end = end( $business_data );
 
                         $mail_contents .= $bd_end['yrityksen_nimi'].' ('.$bd_end['y_tunnus'].') '.$bd_end['rekisterointilaji'].' '.$bd_end['rekisterointiajankohta'].' '.$bd_end['rekisteroity_asia'].PHP_EOL;
 
-                        $existing_data_array[$businessId] = md5( json_encode( end( $businessData ) ) );
+                        $existing_data_array[$business_id] = md5( json_encode( end( $business_data ) ) );
                     }
                 }
             }
