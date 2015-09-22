@@ -89,7 +89,6 @@ class VirreParser
                 $post_fields .= $key . '=' . urlencode( $value ) . '&';
             }
 
-
             $http_header[] = 'Content-Type: application/x-www-form-urlencoded';
 
             curl_setopt( $ch, CURLOPT_POST, 1 ); // Switch from GET to POST
@@ -196,21 +195,21 @@ class VirreParser
                 if ( 0 != $results->length )
                 {
                     $this->company_info_array[$businessId] = array();
-                }
 
-                foreach ( $results as $node )
-                {
-
-                    if ( 7 == $i )
+                    foreach ( $results as $node )
                     {
-                        $i = 0;
-                        $ii++;
+
+                        if ( 7 == $i )
+                        {
+                            $i = 0;
+                            $ii++;
+                        }
+
+                        $column_name = $this->column_names[$i];
+                        $this->company_info_array[$businessId][$ii][$column_name] = trim( $node->nodeValue );
+
+                        $i++;
                     }
-
-                    $column_name = $this->column_names[$i];
-                    $this->company_info_array[$businessId][$ii][$column_name] = trim( $node->nodeValue );
-
-                    $i++;
                 }
             }
         }
