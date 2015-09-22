@@ -8,10 +8,10 @@ $virre = new VirreParser();
 $given_arguments = $argv;
 array_shift( $given_arguments );
 
-// Käydään ensin läpi vanhat, sitten uudet
-
+// Lets first go through the active customers list and fetch their data
 $virre->search_active_companys_data();
 
+// Then check if we have any new customers (from cli) and fetch their data also
 if ( ! empty( $given_arguments ))
 {
     foreach ( $given_arguments as $given_argument )
