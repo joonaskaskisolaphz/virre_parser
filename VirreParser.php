@@ -151,7 +151,7 @@ class VirreParser
             {
                 if ( ($businessId_key = array_search( $businessId, $this->settings['business_ids']['inactive'] )) !== false )
                 {
-                    // Business id found from the 'inactive' list, moving to 'active' list
+                    // Business id is found in the 'inactive' list, moving to 'active' list
                     unset( $this->settings['business_ids']['inactive'][$businessId_key] );
                 }
 
