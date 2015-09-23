@@ -1,11 +1,11 @@
 ---
 send_email_to:
-- joonas@phz.fi
+- your@email.addr.es
+mail_from_addr: virre-parser@email.addr.es
+mail_from_name: Virre Parser
 business_ids:
   active:
   - 1234567-8
-  - 0869288-1
-  - 1234567-9
   inactive:
   - 2345678-9
 useragent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)
