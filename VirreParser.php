@@ -49,7 +49,7 @@ class VirreParser
      * @access private
      */
 
-    private function curl_request( $url, $post_data = array(), $referer = null )
+    private function curl_request( $url, $post_data = array(), $referer = null, $page_is_gzipped = FALSE )
     {
         $ch = curl_init();
 
@@ -68,13 +68,22 @@ class VirreParser
             curl_setopt( $ch, CURLOPT_REFERER, $referer );
         }
 
+        if ( preg_match( '/virre\.prh\.fi/', $url ) )
+        {
+            $http_header_host = 'virre.prh.fi';
+        }
+        else if ( preg_match( '/ytj\.fi/', $url ) )
+        {
+            $http_header_host = 'www.ytj.fi';
+        }
+
         $http_header = array(
             'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/'.'*;q=0.8',
             'Accept-Encoding: gzip, deflate',
             'Accept-Language: en-US,en;q=0.8',
             'Connection: keep-alive',
             'Cache-Control: max-age=0',
-            'Host: virre.prh.fi',
+            'Host: '.$http_header_host,
             'HTTPS: 1',
             'Cache-Control: no-cache, no-store',
             'Pragma: no-cache',
@@ -86,7 +95,7 @@ class VirreParser
             $post_fields = '';
             foreach ( $post_data as $key => $value )
             {
-                $post_fields .= $key . '=' . urlencode( $value ) . '&';
+                $post_fields .= urlencode( $key ) . '=' . urlencode( $value ) . '&';
             }
 
             $http_header[] = 'Content-Type: application/x-www-form-urlencoded';
@@ -102,6 +111,11 @@ class VirreParser
         curl_setopt( $ch, CURLOPT_HTTPHEADER, $http_header );
 
         $retrieved_page = curl_exec( $ch );
+
+        if ( $page_is_gzipped )
+        {
+            $retrieved_page = gzdecode( $retrieved_page );
+        }
 
         $curl_info = curl_getinfo( $ch );
 
@@ -179,11 +193,10 @@ class VirreParser
 
                 $data = $this->curl_request( $base_url, $search_fields, $base_url );
 
-                $DOM = new DOMDocument;
-
                 /* Fixes & characters that dont have ; with them */
                 $amp_fix = preg_replace( '/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $data['contents'] );
 
+                $DOM = new DOMDocument;
                 $DOM->loadHTML( $amp_fix );
 
                 $selector = new DOMXPath( $DOM );
@@ -211,6 +224,111 @@ class VirreParser
                         $i++;
                     }
                 }
+                else
+                {
+                    $this->get_companys_data_from_ytj( $business_id );
+                }
+            }
+        }
+    }
+
+    /**
+     * Retrieves chosen companys data from ytj.fi and creates an array of it
+     * @param string $business_id Companys businessid (1234567-8)
+     * @return array
+     * @access private
+      */
+
+    private function get_companys_data_from_ytj( $business_id )
+    {
+
+        $base_url = 'https://www.ytj.fi/yrityshaku.aspx';
+        $search_url = 'https://www.ytj.fi/yrityshaku.aspx?path=1547';
+
+        $response = $this->curl_request( $base_url, array(), $base_url, TRUE );
+
+        preg_match_all( '/<input type="hidden" name="(.*)" id=".*" value="(.*)" \/>/', $response['contents'], $res );
+
+        $post_array = array();
+        $i = 0;
+
+        foreach ( $res[1] as $post_field )
+        {
+            $post_array[$post_field] = $res[2][$i];
+            $i++;
+        }
+
+        $post_array['_ctl0:ContentPlaceHolder:hakusana'] = '';
+        $post_array['_ctl0:ContentPlaceHolder:ytunnus'] = $business_id;
+        $post_array['_ctl0:ContentPlaceHolder:yrmu'] = '';
+        $post_array['_ctl0:ContentPlaceHolder:LEItunnus'] = '';
+        $post_array['_ctl0:ContentPlaceHolder:sort'] = 'sort1';
+        $post_array['_ctl0:ContentPlaceHolder:suodatus'] = 'suodatus1';
+        $post_array['_ctl0:ContentPlaceHolder:Hae'] = 'Hae+yritykset';
+
+        $data = $this->curl_request( $search_url, $post_array, $base_url, TRUE );
+        $companys_link_found = preg_match( '/<a id="ContentPlaceHolder_rptHakuTulos_HyperLink1_0" href="(.*)">/', $data['contents'], $companys_link );
+
+        if ( $companys_link_found )
+        {
+            $companys_data = $this->curl_request( 'https://www.ytj.fi/'.str_replace( '&amp;', '&', $companys_link[1] ), array(), $search_url, TRUE );
+
+            /* Fixes & characters that dont have ; with them */
+            $amp_fix = preg_replace( '/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $companys_data['contents'] );
+
+            $DOM = new DOMDocument;
+            $DOM->loadHTML( $amp_fix );
+
+            $xpath = new DOMXPath( $DOM );
+            $elements = $xpath->query( "/"."/"."*[@id='detail-result']/table" )->item(1);
+
+            preg_match( '/<span id="ContentPlaceHolder_lblToiminimi">(.*)<\/span>/', $companys_data['contents'], $companys_name );
+
+            $i = 0;
+
+            foreach ( $elements->childNodes as $node )
+            {
+                if ( 0 != $i ) // Skip the header info
+                {
+                    $ii = 0;
+
+                    foreach ( $node->childNodes as $trnode )
+                    {
+                        $explode = explode( PHP_EOL, trim( $trnode->nodeValue ) );
+
+                        foreach ( $explode as $row )
+                        {
+                            $row = preg_replace( '~\xc2\xa0~', '', trim( $row ) ); // Remove some weird characters
+
+                            if ( ! empty( $row ) )
+                            {
+                                switch ( $ii )
+                                {
+                                    case 0:
+                                        $this->company_info_array[$business_id][$i]['y_tunnus'] = $business_id;
+                                        $this->company_info_array[$business_id][$i]['yrityksen_nimi'] = $companys_name[1];
+                                        $this->company_info_array[$business_id][$i]['kotipaikka'] = '';
+                                        $this->company_info_array[$business_id][$i]['diaarinumero'] = '';
+                                        $this->company_info_array[$business_id][$i]['rekisteroity_asia'] = trim( $row );
+                                        break;
+
+                                    case 1:
+                                        $this->company_info_array[$business_id][$i]['rekisterointilaji'] = trim( $row );
+                                        break;
+
+                                    case 2:
+                                        $this->company_info_array[$business_id][$i]['rekisterointiajankohta'] = trim( $row );
+                                        $ii = 0;
+                                        break;
+                                }
+
+                                $ii++;
+                            }
+                        }
+                    }
+                }
+
+                $i++;
             }
         }
     }
