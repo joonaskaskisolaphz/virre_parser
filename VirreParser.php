@@ -334,6 +334,7 @@ class VirreParser
                     $mail->addAddress( $mail_to );
                 }
 
+                $mail->SetFrom( 'virre-parser@phz.fi', 'Virre Parser' );
                 $mail->Subject = utf8_decode( 'Yhden tai useamman yrityksen tietoja päivitetty virreen' );
                 $mail->Body = utf8_decode( $mail_contents );
 
