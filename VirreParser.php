@@ -114,7 +114,14 @@ class VirreParser
 
         if ( $page_is_gzipped )
         {
-            $retrieved_page = gzdecode( $retrieved_page );
+            if ( function_exists( 'gzdecode' ) )
+            {
+                $retrieved_page = gzdecode( $retrieved_page );
+            }
+            else
+            {
+                $retrieved_page = gzinflate( substr( $retrieved_page, 10, -8 ) );
+            }
         }
 
         $curl_info = curl_getinfo( $ch );
