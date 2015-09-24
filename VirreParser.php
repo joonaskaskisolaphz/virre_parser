@@ -11,9 +11,17 @@ class VirreParser
      * Constructor
      */
 
-    public function __construct( $yaml_file = 'settings.yaml' )
+    public function __construct( $yaml_file = null )
     {
-        $this->yaml_file = $yaml_file;
+
+        if ( ! $yaml_file )
+        {
+            $this->yaml_file = __DIR__.'/settings.yaml';
+        }
+        else
+        {
+            $this->yaml_file = $yaml_file;
+        }
 
         if ( ! file_exists( $this->yaml_file ) )
         {
@@ -22,7 +30,7 @@ class VirreParser
 
         $this->settings = yaml_parse_file( $this->yaml_file, 0 );
 
-        $this->json_data_file = 'data.json';
+        $this->json_data_file = __DIR__.'/data.json';
         $this->company_info_array = array();
         $this->column_names = array(
             0 => 'y_tunnus',
