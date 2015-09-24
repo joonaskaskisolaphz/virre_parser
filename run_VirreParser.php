@@ -1,7 +1,7 @@
 <?php
 
-require 'VirreParser.php';
-require 'class.phpmailer.php';
+require_once __DIR__.'/VirreParser.php';
+require_once __DIR__.'/class.phpmailer.php';
 
 $virre = new VirreParser();
 
