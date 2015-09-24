@@ -59,6 +59,9 @@ class VirreParser
 
     private function curl_request( $url, $post_data = array(), $referer = null, $page_is_gzipped = FALSE )
     {
+
+        sleep( rand( 5, 20 ) ); /* Sleep 5-20sec so we dont look like a bot so much */
+
         $ch = curl_init();
 
         curl_setopt( $ch, CURLOPT_VERBOSE, FALSE );
