@@ -1,4 +1,4 @@
-WR<?php
+<?php
 
 /**
  * Retrieves companys data from virre.prh.fi
