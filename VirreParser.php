@@ -1,4 +1,4 @@
-<?php
+WR<?php
 
 /**
  * Retrieves companys data from virre.prh.fi
@@ -60,7 +60,7 @@ class VirreParser
     private function curl_request( $url, $post_data = array(), $referer = null, $page_is_gzipped = FALSE )
     {
 
-        sleep( rand( 5, 20 ) ); /* Sleep 5-20sec so we dont look like a bot so much */
+        sleep( rand( 5, 20 ) ); /* sleep 5-20sec so we dont look like a bot so much */
 
         $ch = curl_init();
 
@@ -449,7 +449,7 @@ class VirreParser
                     {
                         $bd_end = end( $business_data );
 
-                        $mail_contents .= $bd_end['yrityksen_nimi'].' ('.$bd_end['y_tunnus'].') '.$bd_end['rekisterointilaji'].' '.$bd_end['rekisterointiajankohta'].' '.$bd_end['rekisteroity_asia'].PHP_EOL;
+                        $mail_contents .= $bd_end['yrityksen_nimi'].' ('.$bd_end['y_tunnus'].') '.$bd_end['rekisterointilaji'].' '.$bd_end['rekisterointiajankohta'].' '.$bd_end['rekisteroity_asia'].PHP_EOL.PHP_EOL;
 
                         $existing_data_array[$business_id] = md5( json_encode( end( $business_data ) ) );
                     }
