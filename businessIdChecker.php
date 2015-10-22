@@ -37,84 +37,72 @@ class businessIdChecker
     {
         $ch = curl_init();
 
-        curl_setopt( $ch, CURLOPT_VERBOSE, FALSE );
-        curl_setopt( $ch, CURLOPT_HEADER, 0 );
-        curl_setopt( $ch, CURLOPT_URL, $url );
-        curl_setopt( $ch, CURLOPT_COOKIEJAR, $settings['cookie_jar'] );
-        curl_setopt( $ch, CURLOPT_COOKIEFILE, $settings['cookie_jar'] );
-        curl_setopt( $ch, CURLOPT_USERAGENT, $settings['useragent'] );
-        curl_setopt( $ch, CURLOPT_RETURNTRANSFER, TRUE );
-        curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, TRUE );
-        curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, FALSE );
+        curl_setopt($ch, CURLOPT_VERBOSE, FALSE);
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_COOKIEJAR, $settings['cookie_jar']);
+        curl_setopt($ch, CURLOPT_COOKIEFILE, $settings['cookie_jar']);
+        curl_setopt($ch, CURLOPT_USERAGENT, $settings['useragent']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-        if ( null !== $referer )
-        {
-            curl_setopt( $ch, CURLOPT_REFERER, $referer );
+        if (null !== $referer) {
+            curl_setopt($ch, CURLOPT_REFERER, $referer);
         }
 
-        if ( preg_match( '/virre\.prh\.fi/', $url ) )
-        {
+        if (preg_match('/virre\.prh\.fi/', $url)) {
             $http_header_host = 'virre.prh.fi';
-        }
-        else if ( preg_match( '/ytj\.fi/', $url ) )
-        {
+        } else if (preg_match('/ytj\.fi/', $url)) {
             $http_header_host = 'www.ytj.fi';
         }
 
         $http_header = array(
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/'.'*;q=0.8',
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/' . '*;q=0.8',
             'Accept-Encoding: gzip, deflate',
             'Accept-Language: en-US,en;q=0.8',
             'Connection: keep-alive',
             'Cache-Control: max-age=0',
-            'Host: '.$http_header_host,
+            'Host: ' . $http_header_host,
             'HTTPS: 1',
             'Cache-Control: no-cache, no-store',
             'Pragma: no-cache',
         );
 
-        if ( 0 != count( $post_data ) )
-        {
+        if (0 != count($post_data)) {
 
             $post_fields = '';
-            foreach ( $post_data as $key => $value )
-            {
-                $post_fields .= urlencode( $key ) . '=' . urlencode( $value ) . '&';
+            foreach ($post_data as $key => $value) {
+                $post_fields .= urlencode($key) . '=' . urlencode($value) . '&';
             }
 
             $http_header[] = 'Content-Type: application/x-www-form-urlencoded';
 
-            curl_setopt( $ch, CURLOPT_POST, 1 ); /* Switch from GET to POST */
-            curl_setopt( $ch, CURLOPT_POSTFIELDS, $post_fields );
-        }
-        else
-        {
+            curl_setopt($ch, CURLOPT_POST, 1); /* Switch from GET to POST */
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $post_fields);
+        } else {
             $http_header[1] .= ', sdch'; /* Accept-Encoding: */
         }
 
-        curl_setopt( $ch, CURLOPT_HTTPHEADER, $http_header );
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $http_header);
 
-        $retrieved_page = curl_exec( $ch );
+        $retrieved_page = curl_exec($ch);
 
-        if ( $page_is_gzipped )
-        {
-            if ( function_exists( 'gzdecode' ) )
-            {
-                $retrieved_page = gzdecode( $retrieved_page );
-            }
-            else
-            {
-                $retrieved_page = gzinflate( substr( $retrieved_page, 10, -8 ) );
+        if ($page_is_gzipped) {
+            if (function_exists('gzdecode')) {
+                $retrieved_page = gzdecode($retrieved_page);
+            } else {
+                $retrieved_page = gzinflate(substr($retrieved_page, 10, -8));
             }
         }
 
-        $curl_info = curl_getinfo( $ch );
+        $curl_info = curl_getinfo($ch);
 
-        curl_close( $ch );
+        curl_close($ch);
 
-        if ( preg_match( '/<title>Security Check<\/title>/', $retrieved_page ) ) {
+        if (preg_match('/<title>Security Check<\/title>/', $retrieved_page)) {
 
-            preg_match_all( '/<input type="hidden" value="(.*)" name="(.*)"\/>/', $retrieved_page, $res );
+            preg_match_all('/<input type="hidden" value="(.*)" name="(.*)"\/>/', $retrieved_page, $res);
 
             $login_cred_array = array(
                 $res[2][0] => $res[1][0], /* j_username */
@@ -123,10 +111,8 @@ class businessIdChecker
 
             self::curl_request($settings, $settings['j_security_check'], $login_cred_array, 'https://virre.prh.fi/novus/home');
 
-        }
-        else if ( preg_match( '/WebServer - Error report/', $retrieved_page ) )
-        {
-            throw new Exception( 'WebServer Error' );
+        } else if (preg_match('/WebServer - Error report/', $retrieved_page)) {
+            throw new Exception('WebServer Error');
         }
 
         return array(
@@ -145,19 +131,15 @@ class businessIdChecker
     {
         $company_info_array = array();
 
-        if ( ! preg_match( '/^[0-9]{7}[-][0-9]{1}$/', $business_id ) ) /* Check if the given businessId is in the right format */
-        {
-            throw new Exception( 'Invalid businessid!' );
-        }
-        else
-        {
+        if (!preg_match('/^[0-9]{7}[-][0-9]{1}$/', $business_id)) /* Check if the given businessId is in the right format */ {
+            throw new Exception('Invalid businessid!');
+        } else {
 
             $base_url = 'https://virre.prh.fi/novus/publishedEntriesSearch';
 
             $response = self::curl_request($settings, $base_url, array(), $base_url);
 
-            if ( $executionId = self::get_execution_id( $response['curl_info']['url'] ) )
-            {
+            if ($executionId = self::get_execution_id($response['curl_info']['url'])) {
 
                 $search_fields = array(
                     'businessId' => $business_id,
@@ -174,40 +156,35 @@ class businessIdChecker
                 $data = self::curl_request($settings, $base_url, $search_fields, $base_url);
 
                 /* Fixes & characters that dont have ; with them */
-                $amp_fix = preg_replace( '/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $data['contents'] );
+                $amp_fix = preg_replace('/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $data['contents']);
 
                 $DOM = new DOMDocument;
-                @$DOM->loadHTML( $amp_fix );
+                @$DOM->loadHTML($amp_fix);
 
-                $selector = new DOMXPath( $DOM );
-                $results = $selector->query( './/table/tbody/tr/td' );
+                $selector = new DOMXPath($DOM);
+                $results = $selector->query('.//table/tbody/tr/td');
 
                 $i = 0;
                 $ii = 0;
 
-                if ( 0 != $results->length )
-                {
+                if (0 != $results->length) {
                     $company_info_array[$business_id] = array();
 
-                    foreach ( $results as $node )
-                    {
+                    foreach ($results as $node) {
 
-                        if ( 7 == $i )
-                        {
+                        if (7 == $i) {
                             $i = 0;
                             $ii++;
                         }
 
                         $column_name = $settings['column_names'][$i];
-                        $company_info_array[$business_id][$ii][$column_name] = trim( $node->nodeValue );
+                        $company_info_array[$business_id][$ii][$column_name] = trim($node->nodeValue);
 
                         $i++;
                     }
 
                     return $company_info_array[$business_id];
-                }
-                else
-                {
+                } else {
                     self::get_companys_data_from_ytj($settings, $business_id);
                 }
             }
@@ -231,13 +208,12 @@ class businessIdChecker
 
         $response = self::curl_request($settings, $base_url, array(), $base_url, TRUE);
 
-        preg_match_all( '/<input type="hidden" name="(.*)" id=".*" value="(.*)" \/>/', $response['contents'], $res );
+        preg_match_all('/<input type="hidden" name="(.*)" id=".*" value="(.*)" \/>/', $response['contents'], $res);
 
         $post_array = array();
         $i = 0;
 
-        foreach ( $res[1] as $post_field )
-        {
+        foreach ($res[1] as $post_field) {
             $post_array[$post_field] = $res[2][$i];
             $i++;
         }
@@ -251,57 +227,51 @@ class businessIdChecker
         $post_array['_ctl0:ContentPlaceHolder:Hae'] = 'Hae+yritykset';
 
         $data = self::curl_request($settings, $search_url, $post_array, $base_url, TRUE);
-        $companys_link_found = preg_match( '/<a id="ContentPlaceHolder_rptHakuTulos_HyperLink1_0" href="(.*)">/', $data['contents'], $companys_link );
+        $companys_link_found = preg_match('/<a id="ContentPlaceHolder_rptHakuTulos_HyperLink1_0" href="(.*)">/', $data['contents'], $companys_link);
 
-        if ( $companys_link_found )
-        {
-            $companys_data = self::curl_request($settings, 'https://www.ytj.fi/'.str_replace( '&amp;', '&', $companys_link[1] ), array(), $search_url, TRUE);
+        if ($companys_link_found) {
+            $companys_data = self::curl_request($settings, 'https://www.ytj.fi/' . str_replace('&amp;', '&', $companys_link[1]), array(), $search_url, TRUE);
 
             /* Fixes & characters that dont have ; with them */
-            $amp_fix = preg_replace( '/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $companys_data['contents'] );
+            $amp_fix = preg_replace('/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $companys_data['contents']);
 
             $DOM = new DOMDocument;
-            $DOM->loadHTML( $amp_fix );
+            $DOM->loadHTML($amp_fix);
 
-            $xpath = new DOMXPath( $DOM );
-            $elements = $xpath->query( "/"."/"."*[@id='detail-result']/table" )->item(1);
+            $xpath = new DOMXPath($DOM);
+            $elements = $xpath->query("/" . "/" . "*[@id='detail-result']/table")->item(1);
 
-            preg_match( '/<span id="ContentPlaceHolder_lblToiminimi">(.*)<\/span>/', $companys_data['contents'], $companys_name );
+            preg_match('/<span id="ContentPlaceHolder_lblToiminimi">(.*)<\/span>/', $companys_data['contents'], $companys_name);
 
             $i = 0;
 
-            foreach ( $elements->childNodes as $node )
-            {
-                if ( 0 != $i ) // Skip the header info
+            foreach ($elements->childNodes as $node) {
+                if (0 != $i) // Skip the header info
                 {
                     $ii = 0;
 
-                    foreach ( $node->childNodes as $trnode )
-                    {
-                        $explode = explode( PHP_EOL, trim( $trnode->nodeValue ) );
+                    foreach ($node->childNodes as $trnode) {
+                        $explode = explode(PHP_EOL, trim($trnode->nodeValue));
 
-                        foreach ( $explode as $row )
-                        {
-                            $row = preg_replace( '~\xc2\xa0~', '', trim( $row ) ); // Remove some weird characters
+                        foreach ($explode as $row) {
+                            $row = preg_replace('~\xc2\xa0~', '', trim($row)); // Remove some weird characters
 
-                            if ( ! empty( $row ) )
-                            {
-                                switch ( $ii )
-                                {
+                            if (!empty($row)) {
+                                switch ($ii) {
                                     case 0:
                                         $company_info_array[$business_id][$i]['y_tunnus'] = $business_id;
                                         $company_info_array[$business_id][$i]['yrityksen_nimi'] = $companys_name[1];
                                         $company_info_array[$business_id][$i]['kotipaikka'] = '';
                                         $company_info_array[$business_id][$i]['diaarinumero'] = '';
-                                        $company_info_array[$business_id][$i]['rekisteroity_asia'] = trim( $row );
+                                        $company_info_array[$business_id][$i]['rekisteroity_asia'] = trim($row);
                                         break;
 
                                     case 1:
-                                        $company_info_array[$business_id][$i]['rekisterointilaji'] = trim( $row );
+                                        $company_info_array[$business_id][$i]['rekisterointilaji'] = trim($row);
                                         break;
 
                                     case 2:
-                                        $company_info_array[$business_id][$i]['rekisterointiajankohta'] = trim( $row );
+                                        $company_info_array[$business_id][$i]['rekisterointiajankohta'] = trim($row);
                                         $ii = 0;
                                         break;
                                 }
@@ -327,14 +297,11 @@ class businessIdChecker
      */
     private static function get_execution_id($url)
     {
-        preg_match( '/execution[=]([a-z0-9]+)/', $url, $res );
+        preg_match('/execution[=]([a-z0-9]+)/', $url, $res);
 
-        if ( isset( $res[1] ) )
-        {
+        if (isset($res[1])) {
             return $res[1];
-        }
-        else
-        {
+        } else {
             return false;
         }
     }
@@ -345,9 +312,8 @@ class businessIdChecker
      */
     public function __destruct()
     {
-        if ( file_exists( $this->cookie_jar ) )
-        {
-            unset( $this->cookie_jar );
+        if (file_exists($this->cookie_jar)) {
+            unset($this->cookie_jar);
         }
     }
 }
