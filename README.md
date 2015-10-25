@@ -1,7 +1,8 @@
 1. Configure settings.yaml
 2. Run composer install/update
-3. Run run_VirreParser.php &lt;business_id&gt; &lt;business_id2&gt; ..
-4. Add run_VirreParser.php to crontab
+3. Run composer dump-autoload
+4. Run run_VirreParser.php &lt;business_id&gt; &lt;business_id2&gt; ..
+5. Add run_VirreParser.php to crontab
 
 When we want to start tracking a new company, 
 we only need to run "php run_VirreParser.php &lt;business_id&gt;" 
