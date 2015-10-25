@@ -1,8 +1,11 @@
 <?php
 
+require_once __DIR__ . '/vendor/autoload.php';
+
 /**
  * Retrieves companys data from virre.prh.fi
  */
+
 class VirreParser
 {
 

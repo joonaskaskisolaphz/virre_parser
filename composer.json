@@ -1,0 +1,8 @@
+{
+    "require": {
+        "PHPMailer/PHPMailer": "^5.2"
+    },
+    "autoload": {
+        "files": ["VirreParser.php"]
+    }
+}
