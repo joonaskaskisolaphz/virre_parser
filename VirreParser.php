@@ -40,9 +40,10 @@ class VirreParser
 
         $this->cookieJar = tempnam(sys_get_temp_dir(), 'virre');
         $this->base_url = 'https://virre.prh.fi/novus/publishedEntriesSearch';
-        $this->jSecurityCheck = 'https://virre.prh.fi/novus/j_security_check'; /* j_security_check url */
+        /* j_security_check url */
+        $this->jSecurityCheck = 'https://virre.prh.fi/novus/j_security_check';
 
-        $this->curl_request($this->base_url);
+        $this->curlRequest($this->base_url);
     }
 
     /**
@@ -54,8 +55,12 @@ class VirreParser
      * @throws Exception
      * @access private
      */
-    private function curl_request($url, $postData = array(), $referrer = null, $gzippedPage = FALSE)
-    {
+    private function curlRequest(
+        $url,
+        $postData = array(),
+        $referrer = null,
+        $gzippedPage = FALSE
+    ) {
         sleep(rand(5, 20)); /* sleep 5-20sec so we dont look like a bot so much */
 
         $ch = curl_init();
@@ -75,18 +80,18 @@ class VirreParser
         }
 
         if (preg_match('/virre\.prh\.fi/', $url)) {
-            $http_header_host = 'virre.prh.fi';
-        } else if (preg_match('/ytj\.fi/', $url)) {
-            $http_header_host = 'www.ytj.fi';
+            $httpHost = 'virre.prh.fi';
+        } elseif (preg_match('/ytj\.fi/', $url)) {
+            $httpHost = 'www.ytj.fi';
         }
 
-        $http_header = array(
+        $httpHeader = array(
             'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/' . '*;q=0.8',
             'Accept-Encoding: gzip, deflate',
             'Accept-Language: en-US,en;q=0.8',
             'Connection: keep-alive',
             'Cache-Control: max-age=0',
-            'Host: ' . $http_header_host,
+            'Host: ' . $httpHost,
             'HTTPS: 1',
             'Cache-Control: no-cache, no-store',
             'Pragma: no-cache',
@@ -94,20 +99,20 @@ class VirreParser
 
         if (0 != count($postData)) {
 
-            $post_fields = '';
+            $postFields = '';
             foreach ($postData as $key => $value) {
-                $post_fields .= urlencode($key) . '=' . urlencode($value) . '&';
+                $postFields .= urlencode($key) . '=' . urlencode($value) . '&';
             }
 
-            $http_header[] = 'Content-Type: application/x-www-form-urlencoded';
+            $httpHeader[] = 'Content-Type: application/x-www-form-urlencoded';
 
             curl_setopt($ch, CURLOPT_POST, 1); /* Switch from GET to POST */
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $post_fields);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
         } else {
-            $http_header[1] .= ', sdch'; /* Accept-Encoding: */
+            $httpHeader[1] .= ', sdch'; /* Accept-Encoding: */
         }
 
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $http_header);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $httpHeader);
 
         $result = curl_exec($ch);
 
@@ -132,7 +137,11 @@ class VirreParser
                 $res[2][1] => $res[1][1], /* j_password */
             );
 
-            $this->curl_request($this->jSecurityCheck, $loginCredentials, 'https://virre.prh.fi/novus/home');
+            $this->curlRequest(
+                $this->jSecurityCheck,
+                $loginCredentials,
+                'https://virre.prh.fi/novus/home'
+            );
 
         } elseif (preg_match('/WebServer - Error report/', $result)) {
             throw new Exception('WebServer Error');
@@ -166,13 +175,13 @@ class VirreParser
                 $this->settings['business_ids']['active'][] = $businessId;
             }
 
-            $base_url = 'https://virre.prh.fi/novus/publishedEntriesSearch';
+            $baseUrl = 'https://virre.prh.fi/novus/publishedEntriesSearch';
 
-            $response = $this->curl_request($base_url, array(), $base_url);
+            $response = $this->curlRequest($baseUrl, array(), $baseUrl);
 
-            if ($executionId = $this->get_execution_id($response['curl_info']['url'])) {
+            if ($executionId = $this->getExecutionId($response['curl_info']['url'])) {
 
-                $search_fields = array(
+                $searchFields = array(
                     'businessId' => $businessId,
                     'startDate' => '',
                     'endDate' => '',
@@ -184,7 +193,7 @@ class VirreParser
                     '_defaultEventId' => '',
                 );
 
-                $data = $this->curl_request($base_url, $search_fields, $base_url);
+                $data = $this->curlRequest($baseUrl, $searchFields, $baseUrl);
 
                 /* Fixes & characters that dont have ; with them */
                 $amp_fix = preg_replace('/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $data['contents']);
@@ -231,15 +240,15 @@ class VirreParser
         $baseUrl = 'https://www.ytj.fi/yrityshaku.aspx';
         $searchUrl = 'https://www.ytj.fi/yrityshaku.aspx?path=1547';
 
-        $response = $this->curl_request($baseUrl, array(), $baseUrl, TRUE);
+        $response = $this->curlRequest($baseUrl, array(), $baseUrl, TRUE);
 
         preg_match_all('/<input type="hidden" name="(.*)" id=".*" value="(.*)" \/>/', $response['contents'], $res);
 
         $postArray = array();
         $i = 0;
 
-        foreach ($res[1] as $post_field) {
-            $postArray[$post_field] = $res[2][$i];
+        foreach ($res[1] as $postField) {
+            $postArray[$postField] = $res[2][$i];
             $i++;
         }
 
@@ -251,11 +260,11 @@ class VirreParser
         $postArray['_ctl0:ContentPlaceHolder:suodatus'] = 'suodatus1';
         $postArray['_ctl0:ContentPlaceHolder:Hae'] = 'Hae+yritykset';
 
-        $data = $this->curl_request($searchUrl, $postArray, $baseUrl, TRUE);
-        $companyFound = preg_match('/<a id="ContentPlaceHolder_rptHakuTulos_HyperLink1_0" href="(.*)">/', $data['contents'], $companys_link);
+        $data = $this->curlRequest($searchUrl, $postArray, $baseUrl, TRUE);
+        $companyFound = preg_match('/<a id="ContentPlaceHolder_rptHakuTulos_HyperLink1_0" href="(.*)">/', $data['contents'], $companyLink);
 
         if ($companyFound) {
-            $companyData = $this->curl_request('https://www.ytj.fi/' . str_replace('&amp;', '&', $companys_link[1]), array(), $searchUrl, TRUE);
+            $companyData = $this->curlRequest('https://www.ytj.fi/' . str_replace('&amp;', '&', $companyLink[1]), array(), $searchUrl, TRUE);
 
             /* Fixes & characters that dont have ; with them */
             $ampFix = preg_replace('/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $companyData['contents']);
@@ -318,7 +327,7 @@ class VirreParser
      * @return string Returns the execution id
      * @access private
      */
-    private function get_execution_id($url)
+    private function getExecutionId($url)
     {
         preg_match('/execution[=]([a-z0-9]+)/', $url, $res);
 
@@ -335,8 +344,8 @@ class VirreParser
      */
     public function searchCompanysData()
     {
-        foreach ($this->settings['business_ids']['active'] as $business_id) {
-            $this->getCompanysData($business_id);
+        foreach ($this->settings['business_ids']['active'] as $businessId) {
+            $this->getCompanysData($businessId);
         }
     }
 
@@ -406,6 +415,8 @@ class VirreParser
             file_put_contents($this->jsonData, json_encode($existing_data_array));
 
             if (!empty($mailBody) && !empty($this->settings['send_email_to'])) {
+
+                /** @var PHPMailer $mail */
                 $mail = new PHPMailer;
                 $mail->isSendmail();
 
