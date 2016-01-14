@@ -3,32 +3,31 @@
 require_once __DIR__ . '/vendor/autoload.php';
 
 /**
- * Retrieves companys data from virre.prh.fi
+ * Retrieves companies data from virre.prh.fi and ytj.fi if necessary
  */
-
 class VirreParser
 {
-
     /**
      * Constructor
+     * @param string|null $settingsFile
+     * @throws Exception
      */
-    public function __construct($yaml_file = null)
+    public function __construct($settingsFile = null)
     {
-
-        if (!$yaml_file) {
-            $this->yaml_file = __DIR__ . '/settings.yaml';
+        if ($settingsFile === null) {
+            $this->settingsFile = __DIR__ . '/settings.yaml';
         } else {
-            $this->yaml_file = $yaml_file;
+            $this->settingsFile = $settingsFile;
         }
 
-        if (!file_exists($this->yaml_file)) {
-            throw new Exception($this->yaml_file . ' is missing');
+        if (!file_exists($this->settingsFile)) {
+            throw new Exception($this->settingsFile . ' is missing');
         }
 
-        $this->settings = yaml_parse_file($this->yaml_file, 0);
+        $this->settings = yaml_parse_file($this->settingsFile, 0);
 
-        $this->json_data_file = __DIR__ . '/data.json';
-        $this->company_info_array = array();
+        $this->jsonData = __DIR__ . '/data.json';
+        $this->businessInfo = array();
         $this->column_names = array(
             0 => 'y_tunnus',
             1 => 'yrityksen_nimi',
@@ -38,24 +37,25 @@ class VirreParser
             5 => 'rekisterointiajankohta',
             6 => 'rekisteroity_asia',
         );
-        $this->cookie_jar = tempnam(sys_get_temp_dir(), 'virre');
+
+        $this->cookieJar = tempnam(sys_get_temp_dir(), 'virre');
         $this->base_url = 'https://virre.prh.fi/novus/publishedEntriesSearch';
-        $this->j_security_check = 'https://virre.prh.fi/novus/j_security_check'; /* j_security_check url */
+        $this->jSecurityCheck = 'https://virre.prh.fi/novus/j_security_check'; /* j_security_check url */
 
         $this->curl_request($this->base_url);
     }
 
     /**
-     * Retrieves contents of a webpage
      * @param string $url URL
-     * @param array $post_data POST request data ( array('a' => 1, 'b' => 2, ..) )
-     * @param string $referer HTTP Referer:
+     * @param array $postData POST request data ( array('a' => 1, 'b' => 2, ..) )
+     * @param string $referrer HTTP Referer:
+     * @param bool $gzippedPage
      * @return mixed - urls contents
+     * @throws Exception
      * @access private
      */
-    private function curl_request($url, $post_data = array(), $referer = null, $page_is_gzipped = FALSE)
+    private function curl_request($url, $postData = array(), $referrer = null, $gzippedPage = FALSE)
     {
-
         sleep(rand(5, 20)); /* sleep 5-20sec so we dont look like a bot so much */
 
         $ch = curl_init();
@@ -63,15 +63,15 @@ class VirreParser
         curl_setopt($ch, CURLOPT_VERBOSE, FALSE);
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookie_jar);
-        curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookie_jar);
+        curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookieJar);
+        curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookieJar);
         curl_setopt($ch, CURLOPT_USERAGENT, $this->settings['useragent']);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-        if (null !== $referer) {
-            curl_setopt($ch, CURLOPT_REFERER, $referer);
+        if (null !== $referrer) {
+            curl_setopt($ch, CURLOPT_REFERER, $referrer);
         }
 
         if (preg_match('/virre\.prh\.fi/', $url)) {
@@ -92,10 +92,10 @@ class VirreParser
             'Pragma: no-cache',
         );
 
-        if (0 != count($post_data)) {
+        if (0 != count($postData)) {
 
             $post_fields = '';
-            foreach ($post_data as $key => $value) {
+            foreach ($postData as $key => $value) {
                 $post_fields .= urlencode($key) . '=' . urlencode($value) . '&';
             }
 
@@ -109,61 +109,61 @@ class VirreParser
 
         curl_setopt($ch, CURLOPT_HTTPHEADER, $http_header);
 
-        $retrieved_page = curl_exec($ch);
+        $result = curl_exec($ch);
 
-        if ($page_is_gzipped) {
+        if ($gzippedPage) {
             if (function_exists('gzdecode')) {
-                $retrieved_page = gzdecode($retrieved_page);
+                $result = gzdecode($result);
             } else {
-                $retrieved_page = gzinflate(substr($retrieved_page, 10, -8));
+                $result = gzinflate(substr($result, 10, -8));
             }
         }
 
-        $curl_info = curl_getinfo($ch);
+        $curlResult = curl_getinfo($ch);
 
         curl_close($ch);
 
-        if (preg_match('/<title>Security Check<\/title>/', $retrieved_page)) {
+        if (preg_match('/<title>Security Check<\/title>/', $result)) {
 
-            preg_match_all('/<input type="hidden" value="(.*)" name="(.*)"\/>/', $retrieved_page, $res);
+            preg_match_all('/<input type="hidden" value="(.*)" name="(.*)"\/>/', $result, $res);
 
-            $login_cred_array = array(
+            $loginCredentials = array(
                 $res[2][0] => $res[1][0], /* j_username */
                 $res[2][1] => $res[1][1], /* j_password */
             );
 
-            $this->curl_request($this->j_security_check, $login_cred_array, 'https://virre.prh.fi/novus/home');
+            $this->curl_request($this->jSecurityCheck, $loginCredentials, 'https://virre.prh.fi/novus/home');
 
-        } else if (preg_match('/WebServer - Error report/', $retrieved_page)) {
+        } elseif (preg_match('/WebServer - Error report/', $result)) {
             throw new Exception('WebServer Error');
         }
 
         return array(
-            'curl_info' => $curl_info,
-            'contents' => $retrieved_page
+            'curl_info' => $curlResult,
+            'contents' => $result
         );
     }
 
     /**
      * Retrieves chosen companys data from virre.prh.fi and creates an array of it
-     * @param string $business_id Companys businessid (1234567-8)
+     * @param string $businessId Companys businessid (1234567-8)
      * @return array
+     * @throws Exception
      * @access public
      */
-    public function get_companys_data($business_id = '')
+    public function getCompanysData($businessId = '')
     {
-
-        if (!preg_match('/^[0-9]{7}[-][0-9]{1}$/', $business_id)) /* Check if the given businessId is in the right format */ {
+        if (!preg_match('/^[0-9]{7}[-][0-9]{1}$/', $businessId)) {
             throw new Exception('Invalid businessid!');
         } else {
 
-            if (!in_array($business_id, $this->settings['business_ids']['active'])) {
-                if (($business_id_key = array_search($business_id, $this->settings['business_ids']['inactive'])) !== false) {
+            if (!in_array($businessId, $this->settings['business_ids']['active'])) {
+                if (($business_id_key = array_search($businessId, $this->settings['business_ids']['inactive'])) !== false) {
                     /* Business id is found in the 'inactive' list, moving to 'active' list */
                     unset($this->settings['business_ids']['inactive'][$business_id_key]);
                 }
 
-                $this->settings['business_ids']['active'][] = $business_id;
+                $this->settings['business_ids']['active'][] = $businessId;
             }
 
             $base_url = 'https://virre.prh.fi/novus/publishedEntriesSearch';
@@ -173,7 +173,7 @@ class VirreParser
             if ($executionId = $this->get_execution_id($response['curl_info']['url'])) {
 
                 $search_fields = array(
-                    'businessId' => $business_id,
+                    'businessId' => $businessId,
                     'startDate' => '',
                     'endDate' => '',
                     'registrationTypeCode' => '',
@@ -199,7 +199,7 @@ class VirreParser
                 $ii = 0;
 
                 if (0 != $results->length) {
-                    $this->company_info_array[$business_id] = array();
+                    $this->businessInfo[$businessId] = array();
 
                     foreach ($results as $node) {
 
@@ -209,12 +209,12 @@ class VirreParser
                         }
 
                         $column_name = $this->column_names[$i];
-                        $this->company_info_array[$business_id][$ii][$column_name] = trim($node->nodeValue);
+                        $this->businessInfo[$businessId][$ii][$column_name] = trim($node->nodeValue);
 
                         $i++;
                     }
                 } else {
-                    $this->get_companys_data_from_ytj($business_id);
+                    $this->getDataFromYTJ($businessId);
                 }
             }
         }
@@ -222,52 +222,51 @@ class VirreParser
 
     /**
      * Retrieves chosen companys data from ytj.fi and creates an array of it
-     * @param string $business_id Companys businessid (1234567-8)
+     * @param string $businessId Companys businessid (1234567-8)
      * @return array
      * @access private
      */
-    private function get_companys_data_from_ytj($business_id)
+    private function getDataFromYTJ($businessId)
     {
+        $baseUrl = 'https://www.ytj.fi/yrityshaku.aspx';
+        $searchUrl = 'https://www.ytj.fi/yrityshaku.aspx?path=1547';
 
-        $base_url = 'https://www.ytj.fi/yrityshaku.aspx';
-        $search_url = 'https://www.ytj.fi/yrityshaku.aspx?path=1547';
-
-        $response = $this->curl_request($base_url, array(), $base_url, TRUE);
+        $response = $this->curl_request($baseUrl, array(), $baseUrl, TRUE);
 
         preg_match_all('/<input type="hidden" name="(.*)" id=".*" value="(.*)" \/>/', $response['contents'], $res);
 
-        $post_array = array();
+        $postArray = array();
         $i = 0;
 
         foreach ($res[1] as $post_field) {
-            $post_array[$post_field] = $res[2][$i];
+            $postArray[$post_field] = $res[2][$i];
             $i++;
         }
 
-        $post_array['_ctl0:ContentPlaceHolder:hakusana'] = '';
-        $post_array['_ctl0:ContentPlaceHolder:ytunnus'] = $business_id;
-        $post_array['_ctl0:ContentPlaceHolder:yrmu'] = '';
-        $post_array['_ctl0:ContentPlaceHolder:LEItunnus'] = '';
-        $post_array['_ctl0:ContentPlaceHolder:sort'] = 'sort1';
-        $post_array['_ctl0:ContentPlaceHolder:suodatus'] = 'suodatus1';
-        $post_array['_ctl0:ContentPlaceHolder:Hae'] = 'Hae+yritykset';
+        $postArray['_ctl0:ContentPlaceHolder:hakusana'] = '';
+        $postArray['_ctl0:ContentPlaceHolder:ytunnus'] = $businessId;
+        $postArray['_ctl0:ContentPlaceHolder:yrmu'] = '';
+        $postArray['_ctl0:ContentPlaceHolder:LEItunnus'] = '';
+        $postArray['_ctl0:ContentPlaceHolder:sort'] = 'sort1';
+        $postArray['_ctl0:ContentPlaceHolder:suodatus'] = 'suodatus1';
+        $postArray['_ctl0:ContentPlaceHolder:Hae'] = 'Hae+yritykset';
 
-        $data = $this->curl_request($search_url, $post_array, $base_url, TRUE);
-        $companys_link_found = preg_match('/<a id="ContentPlaceHolder_rptHakuTulos_HyperLink1_0" href="(.*)">/', $data['contents'], $companys_link);
+        $data = $this->curl_request($searchUrl, $postArray, $baseUrl, TRUE);
+        $companyFound = preg_match('/<a id="ContentPlaceHolder_rptHakuTulos_HyperLink1_0" href="(.*)">/', $data['contents'], $companys_link);
 
-        if ($companys_link_found) {
-            $companys_data = $this->curl_request('https://www.ytj.fi/' . str_replace('&amp;', '&', $companys_link[1]), array(), $search_url, TRUE);
+        if ($companyFound) {
+            $companyData = $this->curl_request('https://www.ytj.fi/' . str_replace('&amp;', '&', $companys_link[1]), array(), $searchUrl, TRUE);
 
             /* Fixes & characters that dont have ; with them */
-            $amp_fix = preg_replace('/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $companys_data['contents']);
+            $ampFix = preg_replace('/&(?![A-Za-z]+;|#[0-9]+;|#x[0-9a-fA-F]+;)/', '&amp;', $companyData['contents']);
 
             $DOM = new DOMDocument;
-            $DOM->loadHTML($amp_fix);
+            $DOM->loadHTML($ampFix);
 
             $xpath = new DOMXPath($DOM);
             $elements = $xpath->query("/" . "/" . "*[@id='detail-result']/table")->item(1);
 
-            preg_match('/<span id="ContentPlaceHolder_lblToiminimi">(.*)<\/span>/', $companys_data['contents'], $companys_name);
+            preg_match('/<span id="ContentPlaceHolder_lblToiminimi">(.*)<\/span>/', $companyData['contents'], $companyName);
 
             $i = 0;
 
@@ -276,8 +275,8 @@ class VirreParser
                 {
                     $ii = 0;
 
-                    foreach ($node->childNodes as $trnode) {
-                        $explode = explode(PHP_EOL, trim($trnode->nodeValue));
+                    foreach ($node->childNodes as $trNode) {
+                        $explode = explode(PHP_EOL, trim($trNode->nodeValue));
 
                         foreach ($explode as $row) {
                             $row = preg_replace('~\xc2\xa0~', '', trim($row)); // Remove some weird characters
@@ -285,19 +284,19 @@ class VirreParser
                             if (!empty($row)) {
                                 switch ($ii) {
                                     case 0:
-                                        $this->company_info_array[$business_id][$i]['y_tunnus'] = $business_id;
-                                        $this->company_info_array[$business_id][$i]['yrityksen_nimi'] = $companys_name[1];
-                                        $this->company_info_array[$business_id][$i]['kotipaikka'] = '';
-                                        $this->company_info_array[$business_id][$i]['diaarinumero'] = '';
-                                        $this->company_info_array[$business_id][$i]['rekisteroity_asia'] = trim($row);
+                                        $this->businessInfo[$businessId][$i]['y_tunnus'] = $businessId;
+                                        $this->businessInfo[$businessId][$i]['yrityksen_nimi'] = $companyName[1];
+                                        $this->businessInfo[$businessId][$i]['kotipaikka'] = '';
+                                        $this->businessInfo[$businessId][$i]['diaarinumero'] = '';
+                                        $this->businessInfo[$businessId][$i]['rekisteroity_asia'] = trim($row);
                                         break;
 
                                     case 1:
-                                        $this->company_info_array[$business_id][$i]['rekisterointilaji'] = trim($row);
+                                        $this->businessInfo[$businessId][$i]['rekisterointilaji'] = trim($row);
                                         break;
 
                                     case 2:
-                                        $this->company_info_array[$business_id][$i]['rekisterointiajankohta'] = trim($row);
+                                        $this->businessInfo[$businessId][$i]['rekisterointiajankohta'] = trim($row);
                                         $ii = 0;
                                         break;
                                 }
@@ -325,19 +324,19 @@ class VirreParser
 
         if (isset($res[1])) {
             return $res[1];
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
      * Goes through active businessids
      * @access public
      */
-    public function search_active_companys_data()
+    public function searchCompanysData()
     {
         foreach ($this->settings['business_ids']['active'] as $business_id) {
-            $this->get_companys_data($business_id);
+            $this->getCompanysData($business_id);
         }
     }
 
@@ -345,68 +344,68 @@ class VirreParser
      * Saves $this->settings to $this->yaml_file
      * @access public
      */
-    private function save_settings()
+    private function saveSettings()
     {
-        yaml_emit_file($this->yaml_file, $this->settings);
+        yaml_emit_file($this->settingsFile, $this->settings);
     }
 
     /**
      * Adds companies names to $this->yaml_file for easier editing
      * @access private
      */
-    private function add_companies_names_to_yaml_file()
+    private function companiesNamesToYAML()
     {
-        $yaml_data = file_get_contents($this->yaml_file);
+        $settingsFileTemp = file_get_contents($this->settingsFile);
 
-        foreach ($this->company_info_array as $business_id => $business_data) {
+        foreach ($this->businessInfo as $business_id => $business_data) {
             $last_business_data = end($business_data);
 
             $companys_name = $last_business_data['yrityksen_nimi'];
 
-            $yaml_data = preg_replace('/' . $business_id . '/', $business_id . ' # ' . $companys_name, $yaml_data);
+            $settingsFileTemp = preg_replace('/' . $business_id . '/', $business_id . ' # ' . $companys_name, $settingsFileTemp);
         }
 
-        file_put_contents($this->yaml_file, $yaml_data);
+        file_put_contents($this->settingsFile, $settingsFileTemp);
     }
 
     /**
      * Saves new data to $this->json_data_file and send email if necessary
      * @access public
      */
-    public function save_data_and_send_mail()
+    public function saveData()
     {
-        $this->save_settings();
+        $this->saveSettings();
 
-        $mail_contents = '';
+        $mailBody = '';
 
-        if (file_exists($this->json_data_file) || (!file_exists($this->json_data_file) && touch($this->json_data_file))) {
-            $existing_data = file_get_contents($this->json_data_file);
+        if (file_exists($this->jsonData) || (!file_exists($this->jsonData) && touch($this->jsonData))) {
+            $existingData = file_get_contents($this->jsonData);
 
             try {
-                $existing_data_array = json_decode($existing_data, TRUE);
+                $existing_data_array = json_decode($existingData, TRUE);
             } catch (Exception $e) {
                 $existing_data_array = array();
             }
 
-            foreach ($this->company_info_array as $business_id => $business_data) {
-                if (!array_key_exists($business_id, $existing_data_array)) {
-                    $existing_data_array[$business_id] = md5(json_encode(end($business_data)));
+            foreach ($this->businessInfo as $businessId => $business_data) {
+                if (!array_key_exists($businessId, $existing_data_array)) {
+                    $existing_data_array[$businessId] = md5(json_encode(end($business_data)));
                 } else {
-                    if (md5(json_encode(end($business_data))) != $existing_data_array[$business_id]) {
+                    if (md5(json_encode(end($business_data))) != $existing_data_array[$businessId]) {
                         $bd_end = end($business_data);
 
-                        $mail_contents .= $bd_end['yrityksen_nimi'] . ' (' . $bd_end['y_tunnus'] . ') ' . $bd_end['rekisterointilaji'] . ' ' . $bd_end['rekisterointiajankohta'] . ' ' . $bd_end['rekisteroity_asia'] . PHP_EOL . PHP_EOL;
+                        $mailBody .= $bd_end['yrityksen_nimi'] . ' (' . $bd_end['y_tunnus'] . ') ' . $bd_end['rekisterointilaji'] . ' ' . $bd_end['rekisterointiajankohta'] . ' ' . $bd_end['rekisteroity_asia'] . PHP_EOL . PHP_EOL;
 
-                        $existing_data_array[$business_id] = md5(json_encode(end($business_data)));
+                        $existing_data_array[$businessId] = md5(json_encode(end($business_data)));
                     }
                 }
             }
 
-            $this->add_companies_names_to_yaml_file();
+            $this->companiesNamesToYAML();
 
-            file_put_contents($this->json_data_file, json_encode($existing_data_array));
+            file_put_contents($this->jsonData, json_encode($existing_data_array));
 
-            if (!empty($mail_contents) && !empty($this->settings['send_email_to'])) {
+            if (!empty($mailBody) && !empty($this->settings['send_email_to'])) {
                 $mail = new PHPMailer;
                 $mail->isSendmail();
 
@@ -416,7 +415,7 @@ class VirreParser
 
                 $mail->SetFrom($this->settings['mail_from_addr'], $this->settings['mail_from_name']);
                 $mail->Subject = utf8_decode('Yhden tai useamman yrityksen tietoja päivitetty virreen');
-                $mail->Body = utf8_decode($mail_contents);
+                $mail->Body = utf8_decode($mailBody);
 
                 if (!$mail->send()) {
                     echo 'Mailer Error: ' . $mail->ErrorInfo;
@@ -433,8 +432,8 @@ class VirreParser
      */
     public function __destruct()
     {
-        if (file_exists($this->cookie_jar)) {
-            unset($this->cookie_jar);
+        if (file_exists($this->cookieJar)) {
+            unset($this->cookieJar);
         }
     }
 }
